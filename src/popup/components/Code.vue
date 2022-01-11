@@ -7,15 +7,15 @@
           <el-button type="primary" @click="handleClick" plain>生码</el-button>
         </div>
         <div class="qrcode" ref="qrCodeUrl" id="qrcode"></div>
-        <el-button type="primary" class="download " plain @click="download"
+        <el-button type="primary" class="download" plain @click="download"
           >下载图片</el-button
         >
       </div>
     </el-tab-pane>
     <el-tab-pane label="解码" name="second">
       <div class="decoding">
-        <el-button @click="handleResult" plain>点击解码</el-button>
-        <video autoplay></video>
+        <!-- <el-button @click="handleResult" plain>点击解码</el-button> -->
+        <video autoplay ref="qrvideo"></video>
 
         <div class="app__overlay">
           <div class="app__overlay-frame"></div>
@@ -55,7 +55,12 @@
           <div class="app__help-text"></div>
         </div>
         <!-- 结果弹窗 -->
-        <el-dialog title="解码结果" v-model:visible="visible" width="300px" center>
+        <el-dialog
+          title="解码结果"
+          v-model:visible="visible"
+          width="300px"
+          center
+        >
           <div class="result">
             {{ result }}
           </div>
@@ -122,6 +127,7 @@
 <script>
 import QRCode from "qrcodejs2";
 import Clipboard from "clipboard";
+import QrScanner from "qr-scanner";
 
 export default {
   data() {
@@ -133,10 +139,34 @@ export default {
       // 解码
       visible: false,
       result: "",
-      clipboard: null
+      clipboard: null,
     };
   },
   methods: {
+    mounted() {
+      const scanner = new QrScanner(
+         this.$refs.qrvideo,
+        (result) => this.handleResult(result),
+        // (error) => {
+  
+        // }
+      );
+
+
+      scanner.start().then(() => {
+        // updateFlashAvailability();
+        // List cameras after the scanner started to avoid listCamera's stream and the scanner's stream being requested
+        // at the same time which can result in listCamera's unconstrained stream also being offered to the scanner.
+        // Note that we can also start the scanner after listCameras, we just have it this way around in the demo to
+        // start the scanner earlier.
+        QrScanner.listCameras(true).then(cameras => cameras.forEach(camera => {
+            const option = document.createElement('option');
+            option.value = camera.id;
+            option.text = camera.label;
+            // camList.add(option);
+        }));
+    });
+    },
     handleClick() {
       if (!this.rawCode) {
         this.$message.error("请输入内容");
@@ -144,6 +174,7 @@ export default {
       }
       this.createCode();
     },
+
     // 生成二维码
     createCode() {
       if (this.qrcode) {
@@ -155,7 +186,7 @@ export default {
         height: 100,
         colorDark: "#000000",
         colorLight: "#ffffff",
-        correctLevel: QRCode.CorrectLevel.H
+        correctLevel: QRCode.CorrectLevel.H,
       });
     },
     download() {
@@ -178,9 +209,9 @@ export default {
       alink.download = "二维码"; //图片名
       alink.click();
     },
-    handleResult() {
+    handleResult(ret) {
       this.visible = true;
-      this.result = "我是结果";
+      this.result = ret;
     },
     // 生成二维码
     handleRawCode() {
@@ -192,7 +223,7 @@ export default {
     // 复制
     handleCopy() {
       this.clipboard = new Clipboard(".tag-read");
-      this.clipboard.on("success", e => {
+      this.clipboard.on("success", (e) => {
         this.$message.success("复制成功");
         e.clearSelection();
         // 释放内存
@@ -207,8 +238,8 @@ export default {
         this.clipboard.off("success");
         this.clipboard.destroy();
       });
-    }
-  }
+    },
+  },
 };
 </script>
 <style>
